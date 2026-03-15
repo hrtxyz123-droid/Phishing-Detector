@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Detector Pro</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="icons/icon128.png" alt="Logo" class="logo">
+            <h1>Phishing Detector</h1>
+            <div class="badge">Advanced Hybrid AI</div>
+        </header>
+
+        <main>
+            <div class="status-card">
+                <p id="status-text">System Ready</p>
+                <div class="result-display">
+                    <span id="result-label">Last Check:</span>
+                    <span id="result-value">None</span>
+                </div>
+            </div>
+
+            <button id="scanEmails" class="primary-btn">
+                Scan Inbox (IMAP)
+            </button>
+        </main>
+
+        <footer>
+            <p>Powered by TensorFlow.js & Google Safe Browsing</p>
+        </footer>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

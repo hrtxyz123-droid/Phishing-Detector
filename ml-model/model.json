@@ -1,0 +1,48 @@
+{
+  "modelTopology": {
+    "class_name": "Sequential",
+    "config": {
+      "name": "phishing-detector",
+      "layers": [
+        {
+          "class_name": "Dense",
+          "config": {
+            "units": 1,
+            "activation": "sigmoid",
+            "use_bias": true,
+            "kernel_initializer": { "class_name": "VarianceScaling", "config": { "scale": 1, "mode": "fan_avg", "distribution": "uniform", "seed": null } },
+            "bias_initializer": { "class_name": "Zeros", "config": {} },
+            "name": "dense_1",
+            "trainable": true,
+            "batch_input_shape": [null, 500],
+            "dtype": "float32"
+          }
+        }
+      ]
+    },
+    "keras_version": "2.3.1",
+    "backend": "tensorflow"
+  },
+  "format": "layers-model",
+  "generatedBy": "keras v2.3.1",
+  "convertedBy": "TensorFlow.js Converter v1.7.4",
+ "weightsManifest": [
+    {
+      "paths": [],
+      "weights": [
+        {
+          "name": "dense_1/kernel",
+          "shape": [500, 1],
+          "dtype": "float32",
+          "data": []
+        },
+        {
+          "name": "dense_1/bias",
+          "shape": [1],
+          "dtype": "float32",
+          "data": [0.5]
+        }
+      ]
+    }
+  ]
+}
