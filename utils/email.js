@@ -2,39 +2,64 @@ import { phishingModel } from '../ml-model/model.js';
 import { checkPhishingAPI } from './api.js';
 
 /**
- * Analyzes a single email for phishing indicators.
- * @param {tf.LayersModel} model - The loaded TensorFlow.js model.
  * @param {Object} emailData - Object containing { subject, body, from }.
- * @returns {Promise<Object>} - The detection results and confidence.
+ * @returns {Promise<Object>}
  */
-export async function analyzeEmail(model, emailData) {
-    console.log(`[Analyzer] Processing: ${emailData.subject}`);
+export async function analyzeEmail(emailData) {
+
+    if (!emailData || typeof emailData !== "object") {
+        console.warn("Invalid emailData:", emailData);
+        return {
+            isPhishing: false,
+            confidence: 0,
+            source: "Invalid data",
+            subject: "Unknown"
+        };
+    }
+
+    console.log(`[Analyzer] Processing: ${emailData.subject || "No Subject"}`);
 
     try {
-        // 1. Parallel Processing: Start both checks simultaneously for better speed
-        const aiPromise = phishingModel.predict( emailData.body);
-        const apiPromise = checkPhishingAPI(emailData.body);
+        const combinedText =
+    (emailData.subject || "") + " " +
+    (emailData.body || "");
 
-        // Wait for both results to return
+const aiPromise = phishingModel.predict(combinedText);
+        const apiPromise = checkPhishingAPI(emailData.body || "");
+
         const [aiResult, apiResult] = await Promise.all([aiPromise, apiPromise]);
+        console.log("AI Score:", aiResult.rawScore);
+console.log("API Result:", apiResult);
 
-        // 2. Logic Gate: Flag as threat if AI is confident OR Google finds a match
-        const isThreat = aiResult.isPhish || apiResult;
+if (apiResult) {
+    return {
+        isPhishing: true,
+        confidence: 100,
+        source: "Google Safe Browsing",
+        subject: emailData.subject || "No Subject"
+    };
+}
 
-        // 3. Source Attribution: Determine who caught the threat (for the notification)
-        let detectionSource = "Safe";
-        if (apiResult) {
-            detectionSource = "Google Safe Browsing (Blacklisted Link)";
-        } else if (aiResult.isPhish) {
-            detectionSource = "Neural Network (Suspicious Pattern)";
-        }
+const score = aiResult?.rawScore ?? 0;
 
-        return {
-            isPhishing: isThreat,
-            confidence: aiResult.confidence,
-            source: detectionSource,
-            subject: emailData.subject
-        };
+const text = (
+    (emailData.subject || "") + " " +
+    (emailData.body || "")
+).toLowerCase();
+
+const keywordMatch = /(security|alert|verify|password|bank|login|suspended|unauthorized|urgent|click)/i.test(text);
+
+const isThreat =
+    apiResult ||
+    score > 0.75 ||
+    (score > 0.5 && keywordMatch);
+
+return {
+    isPhishing: isThreat,
+    confidence: (score * 100).toFixed(1),
+    source: isThreat ? "Hybrid Detection" : "Safe",
+    subject: emailData.subject || "No Subject"
+};
 
     } catch (error) {
         console.error("Analysis Pipeline Error:", error);
@@ -42,7 +67,7 @@ export async function analyzeEmail(model, emailData) {
             isPhishing: false,
             confidence: 0,
             source: "Error during analysis",
-            subject: emailData.subject
+            subject: emailData.subject || "No Subject"
         };
     }
 }
