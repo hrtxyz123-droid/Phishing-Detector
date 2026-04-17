@@ -8,30 +8,38 @@
 </head>
 <body>
     <div class="container">
+
         <header>
             <img src="icons/icon128.png" alt="Logo" class="logo">
             <h1>Phishing Detector</h1>
-            <div class="badge">Advanced Hybrid AI</div>
+            <div class="badge">Hybrid AI Protection</div>
         </header>
 
         <main>
             <div class="status-card">
-                <p id="status-text">System Ready</p>
+                <p id="status-text">🟢 System Ready</p>
+
                 <div class="result-display">
-                    <span id="result-label">Last Check:</span>
-                    <span id="result-value">None</span>
+                    <span id="result-label">Last Scan:</span>
+                    <span id="result-value">No scan yet</span>
+                </div>
+
+                <div id="progress-bar" class="progress hidden">
+                    <div class="progress-fill"></div>
                 </div>
             </div>
 
             <button id="scanEmails" class="primary-btn">
-                Scan Inbox (IMAP)
+                🔍 Scan Inbox
             </button>
         </main>
 
         <footer>
-            <p>Powered by TensorFlow.js & Google Safe Browsing</p>
+            <p>AI + Google Safe Browsing</p>
         </footer>
+
     </div>
+
     <script src="popup.js"></script>
 </body>
 </html>
