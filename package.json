@@ -1,10 +1,18 @@
 {
+  "name": "phishing-detector-extension",
+  "version": "2.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development",
+    "clean": "rm -rf dist"
+  },
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.0",
     "babel-loader": "^10.1.1",
     "copy-webpack-plugin": "^14.0.0",
-    "webpack": "^5.105.4",
+    "webpack": "^5.106.1",
     "webpack-cli": "^7.0.0"
   },
   "dependencies": {
