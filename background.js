@@ -1,66 +1,139 @@
 import { fetchInbox } from "./email-server/imap.js";
 import { analyzeEmail } from "./utils/email.js";
 import { phishingModel } from "./ml-model/model.js";
-import { CONFIG } from "./utils/config.js";
+import { checkPhishingAPI } from "./utils/api.js"; // ✅ ADDED
 
-let model = null;
+let modelReady = false;
+let isScanning = false;
 
-// 1. Initialization: Load the AI Model
 async function initializeSystem() {
-    if (!model) {
-        model = await phishingModel.load();
+    if (!modelReady) {
+        await phishingModel.load();
         console.log("System Status: Neural Network Ready.");
+        modelReady = true;
     }
 }
 
 chrome.runtime.onInstalled.addListener(initializeSystem);
 chrome.runtime.onStartup.addListener(initializeSystem);
 
-// 2. Message Listener
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+
     if (request.action === "scanEmails") {
-        handleInboxScan().then(() => {
-            sendResponse({ status: "Scan Completed" });
-        }).catch(err => {
-            sendResponse({ status: "Scan Failed", error: err.message });
-        });
+
+        if (isScanning) {
+            sendResponse({ error: "Scan already running" });
+            return;
+        }
+
+        isScanning = true;
+
+        handleInboxScan()
+            .then((result) => {
+                sendResponse(result);
+            })
+            .catch((err) => {
+                console.error("Scan Error:", err);
+                sendResponse({ error: err.message });
+            })
+            .finally(() => {
+                isScanning = false;
+            });
+
+        return true;
     }
-    return true; 
+
+    if (request.action === "checkLink") {
+        handleLinkCheck(request.url);
+    }
 });
 
-// 3. The Core Processing Logic
 async function handleInboxScan() {
-    try {
-        await initializeSystem();
-        const emails = await fetchInbox();
+    await initializeSystem();
 
-        if (!emails || emails.length === 0) return;
+    console.log("🔍 Starting inbox scan...");
 
-        for (const email of emails) {
-            const verdict = await analyzeEmail(email);
+    const emails = await fetchInbox();
 
-            if (verdict.isPhishing) {
-                // ACTION 1: Create a System Notification
-                triggerNotification(email.subject, verdict.confidence, verdict.source);
+    if (!emails || emails.length === 0) {
+        console.warn("No emails found.");
+        return { total: 0, phishing: 0 };
+    }
 
-                // ACTION 2: Trigger the UI Banner in phishing.js
-                // We find the current active tab to show the red warning banner
-                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                    if (tabs[0]) {
-                        chrome.tabs.sendMessage(tabs[0].id, { 
-                            action: "displayVerdict", 
-                            result: verdict 
-                        });
-                    }
-                });
-            }
+    let phishingCount = 0;
+
+    for (const email of emails) {
+
+        if (!email || typeof email !== "object") continue;
+
+        const subject = email.subject || "No Subject";
+        const body = email.text || email.body || "";
+        const from = email.from || "";
+
+        const verdict = await analyzeEmail({ subject, body, from });
+
+        console.log("Verdict:", verdict);
+
+        const confidence = Number(verdict.confidence) || 0;
+
+        if (verdict.isPhishing && confidence > 70) {
+            phishingCount++;
+
+            triggerNotification(subject, confidence, verdict.source);
+
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]) {
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        action: "displayVerdict",
+                        result: verdict
+                    });
+                }
+            });
         }
-    } catch (error) {
-        console.error("Critical System Failure:", error);
+    }
+
+    console.log(`Scan complete: ${phishingCount}/${emails.length} phishing`);
+
+    return {
+        total: emails.length,
+        phishing: phishingCount
+    };
+}
+
+async function handleLinkCheck(url) {
+    console.log("🔗 Checking link:", url);
+
+    try {
+        const isDangerous = await checkPhishingAPI(url);
+
+        if (isDangerous) {
+            chrome.notifications.create({
+                type: "basic",
+                iconUrl: "icons/icon128.png",
+                title: "⚠️ Phishing Link Detected",
+                message: `Dangerous link blocked:\n${url}`,
+                priority: 2
+            });
+
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]) {
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        action: "displayVerdict",
+                        result: {
+                            isPhishing: true,
+                            confidence: 100,
+                            source: "Google Safe Browsing (Link)"
+                        }
+                    });
+                }
+            });
+        }
+
+    } catch (err) {
+        console.error("Link check failed:", err);
     }
 }
 
-// 4. Notification Helper
 function triggerNotification(subject, confidence, source) {
     chrome.notifications.create({
         type: "basic",
@@ -70,3 +143,5 @@ function triggerNotification(subject, confidence, source) {
         priority: 2
     });
 }
+
+console.log("🚀 BACKGROUND READY");
